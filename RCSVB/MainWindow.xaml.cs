@@ -22,17 +22,17 @@ namespace RCSVB
     public partial class MainWindow : Window
     {
 
-        public MainWindow()
+        public MainWindow ()
         {
             InitializeComponent();
         }
 
-        private void Realms_CSV_File_Button_Click(object sender, RoutedEventArgs e)
+        private void Realms_CSV_File_Button_Click (object sender, RoutedEventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "CSV files (*.csv)|*.csv";
             openFileDialog.InitialDirectory = @"C:\";
-            openFileDialog.Title = "Please select a CSV file exported from Realm";
+            openFileDialog.Title = "Select source CSV file exported from Realm";
             if (openFileDialog.ShowDialog() == true)
             {
                 Realms_CSV_File_TextBox.Text = openFileDialog.FileName;
@@ -42,6 +42,9 @@ namespace RCSVB
         private void Output_XLSX_File_Button_Click(object sender, RoutedEventArgs e)
         {
             SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Filter = "Excel Files (*.xlsx)|*.xlsx";
+            saveFileDialog.InitialDirectory = @"C:\";
+            saveFileDialog.Title = "Select or create destination file.";
             if (saveFileDialog.ShowDialog() == true)
             {
                 Output_XLSX_File_TextBox.Text = saveFileDialog.FileName;
@@ -50,7 +53,7 @@ namespace RCSVB
 
         private void Process_Realms_CSV_File_to_Output_File_Button_Click(object sender, RoutedEventArgs e)
         {
-            ExcelBuilder.CreateWorkbook(Realms_CSV_File_TextBox.Text, Output_XLSX_File_TextBox.Text);
+            ExcelBuilder.CreateFromRealmsCSV(Realms_CSV_File_TextBox.Text, Output_XLSX_File_TextBox.Text);
         }
     }
 }
