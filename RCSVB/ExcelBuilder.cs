@@ -66,6 +66,7 @@ namespace RCSVB
             CreateWorksheetTemplate(worksheet);
 
             // Populate template with records
+            PopulateTemplate(worksheet, records);
 
             workbook.SaveAs (destination);
 
@@ -166,6 +167,42 @@ namespace RCSVB
 
             worksheet.Range["D7:D7"].Select();
             worksheet.Application.ActiveWindow.FreezePanes = true;
+
+        }
+
+        private static void PopulateTemplate (Worksheet worksheet, List<RealmsAccountRecord> records) {
+
+            int row = 8;
+            // Populate Actuals
+            worksheet.Cells[row, 1] = "ACTUALS";
+            ((Range)worksheet.Cells[row, 1]).Font.Bold = true;
+            ((Range)worksheet.Cells[row, 1]).Font.Underline = true;
+
+            row++;
+
+            foreach (RealmsAccountRecord record in records)
+            {
+                if (record.Account.Contains ("Total")) {
+                    worksheet.Cells[row,  2] = record.Department + " Total";
+                    ((Range)worksheet.Cells[row, 2]).Font.Bold = true;
+                    worksheet.Cells[row, 11] = record.Actual;
+                } 
+                else
+                {
+                    worksheet.Cells[row, 1] = record.Owner;
+                    worksheet.Cells[row, 2] = record.Department;
+                    worksheet.Cells[row, 3] = record.Account;
+                    worksheet.Cells[row, 11] = record.Actual;
+                }
+                
+
+                ++row;
+            }
+
+
+            // Populate Budget
+
+            // Populate Variance
 
         }
     }
