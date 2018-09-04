@@ -39,28 +39,22 @@ namespace RCSVB
         // Create excel template file from source Realms CSV
         public static void CreateFromRealmsCSV(string source, string destination)
         {
-
-            if (string.IsNullOrWhiteSpace(destination))
-            {
-                System.Windows.MessageBox.Show ("Please select a valid output path.");
-                return;
-            }
-
-            var app = new Application();
-
-            if (app == null)
-            {
-                System.Windows.MessageBox.Show ("Excel is not installed on your system.");
-                return;
-            }
+            var app = CreateExcelApp(destination);
 
             Workbooks workbooks = app.Workbooks;
             Workbook workbook = workbooks.Add();
             Worksheet worksheet = (Worksheet)workbook.Worksheets.Item[1];
 
+            // Open CSV for reading
+            var sr = new StreamReader(source);
+            var csv = new CsvReader(sr);
+
+            // CSV Reader configuration
+            csv.Configuration.MissingFieldFound = null;
+            csv.Configuration.RegisterClassMap<RealmsAccountRecordMap>();
 
             // Get records from csv
-            var records = AccountRecordsFromCSV(source);
+            var records = AccountRecordsFromCSV(csv);
 
             // Create Excel Template
             CreateWorksheetTemplate(worksheet);
@@ -68,6 +62,7 @@ namespace RCSVB
             // Populate template with records
             PopulateTemplate(worksheet, records);
 
+            // Save
             workbook.SaveAs (destination);
 
             // Cleanup
@@ -88,56 +83,47 @@ namespace RCSVB
             GC.Collect();
         }
 
-        public static List<RealmsAccountRecord> AccountRecordsFromCSV(string source)
+        private static Application CreateExcelApp (string destination)
         {
-            // Open CSV for reading
-            var sr = new StreamReader(source);
-            var csv = new CsvReader(sr);
+            if (string.IsNullOrWhiteSpace(destination))
+            {
+                System.Windows.MessageBox.Show("Please select a valid output path.");
+                return null;
+            }
 
-            // CSV Reader configuration
-            csv.Configuration.MissingFieldFound = null;
-            csv.Configuration.RegisterClassMap<RealmsAccountRecordMap>();
+            return new Application();
+        }
 
+        private static List<RealmsAccountRecord> AccountRecordsFromCSV(CsvReader csv)
+        {
             List<RealmsAccountRecord> realmsAccountRecords = new List<RealmsAccountRecord>();
 
             // Read CSV headers
-            csv.Read ();
-            csv.ReadHeader ();
+            csv.Read();
+            csv.ReadHeader();
 
-            string currentOwner = "";
-            string currentDepartment = "";
+            string owner = "";
+            string department = "";
 
             // Read each record
-            while (csv.Read ()) {
+            while (csv.Read())
+            {
                 // Populate record using RealmsAccountRecordMap
                 var record = csv.GetRecord<RealmsAccountRecord>();
+                record.TrimCSVFields();
 
-                // Check if record is owner or department heading
-                if (string.IsNullOrEmpty (record.Actual) ||
-                    string.IsNullOrEmpty (record.Budget) ||
-                    string.IsNullOrEmpty (record.Variance))
+                // Determine if record is owner, department, or account
+                if (record.IsValidAccountRecord)
                 {
-                    // Determine if owner or department
-                    if (record.Account.StartsWith("         ")) // 9 spaces
-                    {
-                        currentDepartment = record.Account.Trim();
-                    } else if (record.Account.StartsWith("      ")) // 6 spaces
-                    {
+                    record.Owner = owner;
+                    record.Department = department;
+                    record.Account = record.Account;
 
-                    } else if (record.Account.StartsWith("   ")) // 3 spaces
-                    {
-                        currentOwner = record.Account.Trim();
-                    }
+                    realmsAccountRecords.Add(record);
 
                     continue;
                 }
 
-                // Populate additional record properties
-                record.Owner = currentOwner;
-                record.Department = currentDepartment;
-                record.Account = record.Account.Trim();
-
-                realmsAccountRecords.Add(record);
             }
 
             return realmsAccountRecords;
@@ -163,7 +149,6 @@ namespace RCSVB
             worksheet.Cells[6, 11] = "TOTAL TC";
 
             worksheet.Range["A1:A6"].EntireRow.Font.Bold = true;
-            worksheet.Columns.AutoFit();
 
             worksheet.Range["D7:D7"].Select();
             worksheet.Application.ActiveWindow.FreezePanes = true;
@@ -203,6 +188,9 @@ namespace RCSVB
             // Populate Budget
 
             // Populate Variance
+
+            // Autofit
+            worksheet.Columns.AutoFit();
 
         }
     }
