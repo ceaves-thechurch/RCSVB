@@ -8,6 +8,8 @@ namespace RCSVB
 {
     public class RealmsAccountRecord
     {
+        private static Regex _ownerRecordValidation = new Regex(@"^[\s]{3}\S");
+        private static Regex _departmentRecordValidation = new Regex(@"^[\s]{4}");
         private static Regex _accountRecordValidation = new Regex(@"^[0-9]{5}");
         private static Regex _totalRecordValidation = new Regex(@"^Total");
 
@@ -22,7 +24,7 @@ namespace RCSVB
         {
             get
             {
-                return _accountRecordValidation.IsMatch(Account);
+                return _accountRecordValidation.IsMatch(Account.Trim());
             }
         }
 
@@ -30,7 +32,22 @@ namespace RCSVB
         {
             get
             {
-                return _totalRecordValidation.IsMatch(Account);
+                return _totalRecordValidation.IsMatch(Account.Trim());
+            }
+        }
+
+        public bool IsOwnerRecord
+        {
+            get
+            {
+                return _ownerRecordValidation.IsMatch(Account);
+            }
+        }
+        public bool IsDepartmentRecord
+        {
+            get
+            {
+                return _departmentRecordValidation.IsMatch(Account);
             }
         }
 

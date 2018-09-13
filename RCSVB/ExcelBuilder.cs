@@ -7,36 +7,12 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using CsvHelper;
-using MissingFieldException = CsvHelper.MissingFieldException;
+using RCSVB.Models;
 
 namespace RCSVB
 {
     class ExcelBuilder
     {
-
-        // Create an empty workbook
-        public static void CreateEmptyWorkbook(string destination)
-        {
-            if (string.IsNullOrWhiteSpace (destination))
-            {
-                System.Windows.MessageBox.Show("Please select a valid output path.");
-                return;
-            }
-
-            var excelApp = new Application();
-
-            if (excelApp == null)
-            {
-                System.Windows.MessageBox.Show("Excel is not installed on your system.");
-                return;
-            }
-
-            var excelWorkbook = excelApp.Workbooks.Add();
-
-            excelWorkbook.SaveAs(destination);
-        }
-
-        // Create excel template file from source Realms CSV
         public static void CreateFromRealmsCSV(string source, string destination)
         {
             var app = CreateExcelApp(destination);
@@ -45,45 +21,23 @@ namespace RCSVB
             Workbook workbook = workbooks.Add();
             Worksheet worksheet = (Worksheet)workbook.Worksheets.Item[1];
 
-            // Open CSV for reading
-            var sr = new StreamReader(source);
-            var csv = new CsvReader(sr);
+            var csv = ConfigureCSV(source);
 
-            // CSV Reader configuration
-            csv.Configuration.MissingFieldFound = null;
-            csv.Configuration.RegisterClassMap<RealmsAccountRecordMap>();
-
-            // Get records from csv
+            // Reading records the old way
             var records = AccountRecordsFromCSV(csv);
 
-            // Create Excel Template
             CreateWorksheetTemplate(worksheet);
 
-            // Populate template with records
+            // Writing records the old way
             PopulateTemplate(worksheet, records);
 
-            // Save
             workbook.SaveAs (destination);
 
             // Cleanup
-            workbook.Close();
-            workbooks.Close();
-            app.Quit();
-
-            Marshal.FinalReleaseComObject(worksheet);
-            Marshal.FinalReleaseComObject(workbook);
-            Marshal.FinalReleaseComObject(workbooks);
-            Marshal.FinalReleaseComObject(app);
-
-            worksheet = null;
-            workbook = null;
-            workbooks = null;
-            app = null;
-
-            GC.Collect();
+            Cleanup(app, workbooks, workbook, worksheet);
         }
 
-        private static Application CreateExcelApp (string destination)
+        private static Application CreateExcelApp(string destination)
         {
             if (string.IsNullOrWhiteSpace(destination))
             {
@@ -94,39 +48,80 @@ namespace RCSVB
             return new Application();
         }
 
-        private static List<RealmsAccountRecord> AccountRecordsFromCSV(CsvReader csv)
+        private static CsvReader ConfigureCSV(string source)
         {
-            List<RealmsAccountRecord> realmsAccountRecords = new List<RealmsAccountRecord>();
+            var sr = new StreamReader(source);
+            var csv = new CsvReader(sr);
+
+            csv.Configuration.MissingFieldFound = null;
+            csv.Configuration.RegisterClassMap<RealmsAccountRecordMap>();
+
+            return csv;
+        }
+
+        private static void Cleanup (Application application, Workbooks workbooks, Workbook workbook, Worksheet worksheet)
+        {
+            workbook.Close();
+            workbooks.Close();
+            application.Quit();
+
+            Marshal.FinalReleaseComObject(worksheet);
+            Marshal.FinalReleaseComObject(workbook);
+            Marshal.FinalReleaseComObject(workbooks);
+            Marshal.FinalReleaseComObject(application);
+
+            worksheet = null;
+            workbook = null;
+            workbooks = null;
+            application = null;
+
+            GC.Collect();
+        }
+
+
+        private static Department RealmsRecords(CsvReader csv)
+        {
+            Department currentDepartment = null;
 
             // Read CSV headers
             csv.Read();
             csv.ReadHeader();
 
-            string owner = "";
-            string department = "";
-
             // Read each record
             while (csv.Read())
             {
                 // Populate record using RealmsAccountRecordMap
-                var record = csv.GetRecord<RealmsAccountRecord>();
-                record.TrimCSVFields();
+                var record = csv.GetRecord<RealmsRecord>();
 
-                // Determine if record is owner, department, or account
-                if (record.IsValidAccountRecord)
+                if (record.IsAccountRecord)
                 {
-                    record.Owner = owner;
-                    record.Department = department;
-                    record.Account = record.Account;
-
-                    realmsAccountRecords.Add(record);
-
-                    continue;
+                    // Add Account to currentDepartment
+                    var account = new Account(currentDepartment)
+                    {
+                        Name = record.Account,
+                        Actual = float.Parse(record.Actual),
+                        Budget = float.Parse(record.Budget),
+                        Variance = float.Parse(record.Budget)
+                    };
+                    currentDepartment.Accounts.Add(account);
                 }
-
+                else if (record.IsDepartmentHeading)
+                {
+                    // Set currentDepartment to new Department
+                    var department = new Department(record.Account, currentDepartment);
+                    currentDepartment = department;
+                }
+                else if (record.IsDepartmentTotalRow)
+                {
+                    // Set currentDepartment to parent
+                    if (currentDepartment.ParentDepartment != null)
+                    {
+                        currentDepartment = currentDepartment.ParentDepartment;
+                    }
+                }
             }
 
-            return realmsAccountRecords;
+            return currentDepartment;
         }
 
         private static void CreateWorksheetTemplate(Worksheet worksheet)
@@ -163,27 +158,41 @@ namespace RCSVB
             ((Range)worksheet.Cells[row, 1]).Font.Bold = true;
             ((Range)worksheet.Cells[row, 1]).Font.Underline = true;
 
-            row++;
+            int actualsStartRow = ++row;
+            int ownerStartRow = actualsStartRow;
 
-            foreach (RealmsAccountRecord record in records)
+            for (int i = 0; i < records.Count; ++i, ++row)
             {
-                if (record.Account.Contains ("Total")) {
-                    worksheet.Cells[row,  2] = record.Department + " Total";
-                    ((Range)worksheet.Cells[row, 2]).Font.Bold = true;
-                    worksheet.Cells[row, 11] = record.Actual;
-                } 
-                else
-                {
-                    worksheet.Cells[row, 1] = record.Owner;
-                    worksheet.Cells[row, 2] = record.Department;
-                    worksheet.Cells[row, 3] = record.Account;
-                    worksheet.Cells[row, 11] = record.Actual;
-                }
-                
+                worksheet.Cells[row, 1] = records[i].Owner;
+                worksheet.Cells[row, 2] = records[i].Department;
+                worksheet.Cells[row, 3] = records[i].Account;
+                worksheet.Cells[row, 11] = records[i].Actual;
 
-                ++row;
+                if (i < records.Count - 1 && records[i].Owner != records[i + 1].Owner)
+                {
+                    ++row;
+                    worksheet.Cells[row, 1] = records[i].Owner + " Total";
+                    worksheet.Cells[row, 11] = string.Format("=SUM(K{0}:K{1})", ownerStartRow, row - 1);
+                    ((Range)worksheet.Cells[row, 11]).NumberFormat = "$ #,###.00";
+                    ((Range)worksheet.Rows[row]).Font.Bold = true;
+                    GroupRows(worksheet, ownerStartRow, row - 1);
+                    ownerStartRow = row + 1;
+                }
+                else if (i == records.Count)
+                {
+                    ++row;
+                    worksheet.Cells[row, 1] = records[i].Owner + " Total";
+                    worksheet.Cells[row, 11] = string.Format("=SUM(K{0}:K{1})", ownerStartRow, row - 1);
+                    ((Range)worksheet.Cells[row, 11]).NumberFormat = "$ #,###.00";
+                    ((Range)worksheet.Rows[row]).Font.Bold = true;
+                    GroupRows(worksheet, ownerStartRow, row - 1);
+                }
+
             }
 
+            int actualsEndRow = row - 1;
+            GroupRows(worksheet, actualsStartRow, actualsEndRow);
+        
 
             // Populate Budget
 
@@ -192,6 +201,11 @@ namespace RCSVB
             // Autofit
             worksheet.Columns.AutoFit();
 
+        }
+
+        private static void GroupRows (Worksheet worksheet, int start, int end)
+        {
+            worksheet.Rows[string.Format("{0}:{1}", start, end)].Group();
         }
     }
 }
