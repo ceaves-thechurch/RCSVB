@@ -2,11 +2,9 @@ c:\users\ceaves\source\repos\RCSVB\RCSVB\bin\Debug\RCSVB.exe.config
 c:\users\ceaves\source\repos\RCSVB\RCSVB\bin\Debug\RCSVB.exe
 c:\users\ceaves\source\repos\RCSVB\RCSVB\bin\Debug\RCSVB.pdb
 c:\users\ceaves\source\repos\RCSVB\RCSVB\obj\Debug\RCSVB.csprojAssemblyReference.cache
-c:\users\ceaves\source\repos\RCSVB\RCSVB\obj\Debug\MainWindow.g.cs
 c:\users\ceaves\source\repos\RCSVB\RCSVB\obj\Debug\App.g.cs
 c:\users\ceaves\source\repos\RCSVB\RCSVB\obj\Debug\RCSVB_MarkupCompile.cache
 c:\users\ceaves\source\repos\RCSVB\RCSVB\obj\Debug\RCSVB_MarkupCompile.lref
-c:\users\ceaves\source\repos\RCSVB\RCSVB\obj\Debug\MainWindow.baml
 c:\users\ceaves\source\repos\RCSVB\RCSVB\obj\Debug\RCSVB.g.resources
 c:\users\ceaves\source\repos\RCSVB\RCSVB\obj\Debug\RCSVB.Properties.Resources.resources
 c:\users\ceaves\source\repos\RCSVB\RCSVB\obj\Debug\RCSVB.csproj.GenerateResource.cache
@@ -50,3 +48,5 @@ X:\RCSVB\RCSVB\obj\Debug\RCSVB.csproj.CoreCompileInputs.cache
 X:\RCSVB\RCSVB\obj\Debug\RCSVB.csproj.CopyComplete
 X:\RCSVB\RCSVB\obj\Debug\RCSVB.exe
 X:\RCSVB\RCSVB\obj\Debug\RCSVB.pdb
+C:\Users\ceaves\source\repos\RCSVB\RCSVB\obj\Debug\MainWindow.g.cs
+C:\Users\ceaves\source\repos\RCSVB\RCSVB\obj\Debug\MainWindow.baml

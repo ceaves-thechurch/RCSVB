@@ -14,22 +14,19 @@ namespace RCSVB.Models
         public List<Account> Accounts { get; set; }
         public List<Department> Departments { get; set; }
 
-        public Department(string name)
-        {
-            Name = name;
-            Depth = 0;
-            ParentDepartment = null;
-
-            Accounts = new List<Account>();
-            Departments = new List<Department>();
-        }
-
         public Department(string name, Department parent)
         {
-            Name = name;
-            Depth = parent.Depth + 1;
+            Name = name.Trim();
             ParentDepartment = parent;
-            parent.Departments.Add(this);
+            if (parent != null)
+            {
+                Depth = parent.Depth + 1;
+                parent.Departments.Add(this);
+            }
+            else
+            {
+                Depth = 0;
+            }
 
             Accounts = new List<Account>();
             Departments = new List<Department>();

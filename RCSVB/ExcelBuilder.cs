@@ -24,12 +24,12 @@ namespace RCSVB
             var csv = ConfigureCSV(source);
 
             // Reading records the old way
-            var records = AccountRecordsFromCSV(csv);
+            var departmentRoot = RealmsRecords(csv);
 
             CreateWorksheetTemplate(worksheet);
 
             // Writing records the old way
-            PopulateTemplate(worksheet, records);
+            PopulateTemplate(worksheet, new List<RealmsAccountRecord> ());
 
             workbook.SaveAs (destination);
 
@@ -54,7 +54,7 @@ namespace RCSVB
             var csv = new CsvReader(sr);
 
             csv.Configuration.MissingFieldFound = null;
-            csv.Configuration.RegisterClassMap<RealmsAccountRecordMap>();
+            csv.Configuration.RegisterClassMap<RealmsRecordMap>();
 
             return csv;
         }
@@ -93,25 +93,18 @@ namespace RCSVB
                 // Populate record using RealmsAccountRecordMap
                 var record = csv.GetRecord<RealmsRecord>();
 
-                if (record.IsAccountRecord)
+                if (record.IsAccountRecord())
                 {
                     // Add Account to currentDepartment
-                    var account = new Account(currentDepartment)
-                    {
-                        Name = record.Account,
-                        Actual = float.Parse(record.Actual),
-                        Budget = float.Parse(record.Budget),
-                        Variance = float.Parse(record.Budget)
-                    };
-                    currentDepartment.Accounts.Add(account);
+                    var account = new Account(record, currentDepartment);
                 }
-                else if (record.IsDepartmentHeading)
+                else if (record.IsDepartmentHeading())
                 {
                     // Set currentDepartment to new Department
                     var department = new Department(record.Account, currentDepartment);
                     currentDepartment = department;
                 }
-                else if (record.IsDepartmentTotalRow)
+                else if (record.IsDepartmentTotalRow(currentDepartment))
                 {
                     // Set currentDepartment to parent
                     if (currentDepartment.ParentDepartment != null)
@@ -121,6 +114,10 @@ namespace RCSVB
                 }
             }
 
+            while (currentDepartment.ParentDepartment != null)
+            {
+                currentDepartment = currentDepartment.ParentDepartment;
+            }
             return currentDepartment;
         }
 
@@ -147,7 +144,6 @@ namespace RCSVB
 
             worksheet.Range["D7:D7"].Select();
             worksheet.Application.ActiveWindow.FreezePanes = true;
-
         }
 
         private static void PopulateTemplate (Worksheet worksheet, List<RealmsAccountRecord> records) {
