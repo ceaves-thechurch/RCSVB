@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using Microsoft.Office.Interop.Excel;
 
 namespace RCSVB.Models
 {
     public class Department    
     {
-        public static readonly int RootDepth = 1;
+        public static readonly int OwnerDepth = 1;
 
         public string Name { get; set; }
         public int Depth { get; set; }
@@ -35,29 +36,78 @@ namespace RCSVB.Models
         // Usage:
         // float actualTotal = dept.Total(account => account.Actual);
         // float budgetTotal = dept.Total(account => account.Budget);
-        public float Total (Func<Account, float> method)
+        public double Total (Func<Account, double> method)
         {
-            return AccountsTotal(method) + DepartmentsTotal(method);
-        }
+            double total = 0;
 
-        public float AccountsTotal(Func<Account, float> method)
-        {
-            float total = 0f;
-            foreach (Account account in Accounts)
-            {
-                total += method(account);
+            foreach (Account account in Accounts) {
+                total += method (account);
             }
+
+            foreach (Department department in Departments) {
+                total += department.Total (method);
+            }
+
             return total;
         }
 
-        public float DepartmentsTotal(Func<Account, float> method)
+        public void PrintExcelRows(Worksheet worksheet, ref int row, Func<Account, double> method, string section)
         {
-            float total = 0f;
-            foreach (Department department in Departments)
-            {
-                total += department.Total(method);
+            string departmentOwnerName = DepartmentOwnerName();
+            string departmentName = Name;
+
+            int groupStartRow = row;
+
+            foreach (Account account in Accounts) {
+                worksheet.Cells[row, 1] = departmentOwnerName;
+                worksheet.Cells[row, 2] = departmentName;
+                worksheet.Cells[row, 3] = account.Name;
+                worksheet.Cells[row, 11] = method(account);
+                ++row;
             }
-            return total;
+
+            foreach(Department department in Departments)
+            {
+                department.PrintExcelRows(worksheet, ref row, method, section);
+            }
+
+            if (Depth == 1) {
+                worksheet.Cells[row, 1] = departmentName + " Total";
+                worksheet.Cells[row, 11] = Total (method);
+                ((Range) worksheet.Rows[row]).Font.Bold = true;
+                GroupRows (worksheet, groupStartRow, row - 1);
+                ++row;
+            }
+            else if (Depth == 0)
+            {
+                worksheet.Cells[row, 1] = section + " Grand Total";
+                worksheet.Cells[row, 11] = Total(method);
+                ((Range)worksheet.Rows[row]).Font.Bold = true;
+                GroupRows(worksheet, groupStartRow, row - 1);
+                ++row;
+            }
+
+            if (Accounts.Count > 0)
+            {
+                worksheet.Cells[row, 2] = departmentName + " Total";
+                worksheet.Cells[row, 11] = Total(method); // $"=SUM(K{groupStartRow}:K{row - 1})";
+                ((Range)worksheet.Rows[row]).Font.Bold = true;
+                GroupRows(worksheet, groupStartRow, row - 1);
+                ++row;
+            }
+        }
+
+        public string DepartmentOwnerName() 
+        {
+            Department department = this;
+            while (department.Depth > OwnerDepth) {
+                department = department.ParentDepartment;
+            }
+            return department.Name;
+        }
+
+        private static void GroupRows(_Worksheet worksheet, int start, int end) {
+            worksheet.Rows[$"{start}:{end}"].Group ();
         }
     }
 }

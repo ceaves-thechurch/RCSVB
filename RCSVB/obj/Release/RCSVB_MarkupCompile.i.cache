@@ -4,15 +4,15 @@
 winexe
 C#
 .cs
-X:\RCSVB\RCSVB\obj\Debug\
+X:\RCSVB\RCSVB\obj\Release\
 RCSVB
 none
 false
-DEBUG;TRACE
+TRACE
 X:\RCSVB\RCSVB\App.xaml
 11151548125
 
-10361025716
+1472003085
 15-682065176
 MainWindow.xaml;
 

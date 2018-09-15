@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 using CsvHelper;
 using RCSVB.Models;
 
@@ -13,7 +12,7 @@ namespace RCSVB
 {
     class ExcelBuilder
     {
-        public static void CreateFromRealmsCSV(string source, string destination)
+        public static int CreateFromRealmsCSV(string source, string destination)
         {
             var app = CreateExcelApp(destination);
 
@@ -21,20 +20,21 @@ namespace RCSVB
             Workbook workbook = workbooks.Add();
             Worksheet worksheet = (Worksheet)workbook.Worksheets.Item[1];
 
+            CreateWorksheetTemplate (worksheet);
+
             var csv = ConfigureCSV(source);
 
             // Reading records the old way
-            var departmentRoot = RealmsRecords(csv);
-
-            CreateWorksheetTemplate(worksheet);
+            var departmentRoot = ReadRealmsRecords(csv);
 
             // Writing records the old way
-            PopulateTemplate(worksheet, new List<RealmsAccountRecord> ());
+            PopulateTemplate(worksheet, departmentRoot);
 
             workbook.SaveAs (destination);
 
             // Cleanup
             Cleanup(app, workbooks, workbook, worksheet);
+            return 0;
         }
 
         private static Application CreateExcelApp(string destination)
@@ -79,7 +79,7 @@ namespace RCSVB
         }
 
 
-        private static Department RealmsRecords(CsvReader csv)
+        private static Department ReadRealmsRecords(CsvReader csv)
         {
             Department currentDepartment = null;
 
@@ -144,64 +144,39 @@ namespace RCSVB
 
             worksheet.Range["D7:D7"].Select();
             worksheet.Application.ActiveWindow.FreezePanes = true;
+
+            worksheet.Columns[11].NumberFormat = "$#,###.00";
         }
 
-        private static void PopulateTemplate (Worksheet worksheet, List<RealmsAccountRecord> records) {
-
+        private static void PopulateTemplate (Worksheet worksheet, Department departmentRoot)
+        {
             int row = 8;
+
             // Populate Actuals
             worksheet.Cells[row, 1] = "ACTUALS";
             ((Range)worksheet.Cells[row, 1]).Font.Bold = true;
             ((Range)worksheet.Cells[row, 1]).Font.Underline = true;
+            ++row;
+            departmentRoot.PrintExcelRows (worksheet, ref row, account => account.Actual, "ACTUALS");
 
-            int actualsStartRow = ++row;
-            int ownerStartRow = actualsStartRow;
+            ++row;
 
-            for (int i = 0; i < records.Count; ++i, ++row)
-            {
-                worksheet.Cells[row, 1] = records[i].Owner;
-                worksheet.Cells[row, 2] = records[i].Department;
-                worksheet.Cells[row, 3] = records[i].Account;
-                worksheet.Cells[row, 11] = records[i].Actual;
+            worksheet.Cells[row, 1] = "BUDGET";
+            ((Range)worksheet.Cells[row, 1]).Font.Bold = true;
+            ((Range)worksheet.Cells[row, 1]).Font.Underline = true;
+            ++row;
+            departmentRoot.PrintExcelRows (worksheet, ref row, account => account.Budget, "BUDGET");
 
-                if (i < records.Count - 1 && records[i].Owner != records[i + 1].Owner)
-                {
-                    ++row;
-                    worksheet.Cells[row, 1] = records[i].Owner + " Total";
-                    worksheet.Cells[row, 11] = string.Format("=SUM(K{0}:K{1})", ownerStartRow, row - 1);
-                    ((Range)worksheet.Cells[row, 11]).NumberFormat = "$ #,###.00";
-                    ((Range)worksheet.Rows[row]).Font.Bold = true;
-                    GroupRows(worksheet, ownerStartRow, row - 1);
-                    ownerStartRow = row + 1;
-                }
-                else if (i == records.Count)
-                {
-                    ++row;
-                    worksheet.Cells[row, 1] = records[i].Owner + " Total";
-                    worksheet.Cells[row, 11] = string.Format("=SUM(K{0}:K{1})", ownerStartRow, row - 1);
-                    ((Range)worksheet.Cells[row, 11]).NumberFormat = "$ #,###.00";
-                    ((Range)worksheet.Rows[row]).Font.Bold = true;
-                    GroupRows(worksheet, ownerStartRow, row - 1);
-                }
+            ++row;
 
-            }
-
-            int actualsEndRow = row - 1;
-            GroupRows(worksheet, actualsStartRow, actualsEndRow);
-        
-
-            // Populate Budget
-
-            // Populate Variance
+            worksheet.Cells[row, 1] = "VARIANCE";
+            ((Range)worksheet.Cells[row, 1]).Font.Bold = true;
+            ((Range)worksheet.Cells[row, 1]).Font.Underline = true;
+            ++row;
+            departmentRoot.PrintExcelRows (worksheet, ref row, account => account.Variance, "VARIANCE");
 
             // Autofit
             worksheet.Columns.AutoFit();
-
-        }
-
-        private static void GroupRows (Worksheet worksheet, int start, int end)
-        {
-            worksheet.Rows[string.Format("{0}:{1}", start, end)].Group();
         }
     }
 }

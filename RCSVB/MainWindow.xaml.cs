@@ -1,8 +1,10 @@
 ﻿using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -51,9 +53,30 @@ namespace RCSVB
             }
         }
 
-        private void Process_Realms_CSV_File_to_Output_File_Button_Click(object sender, RoutedEventArgs e)
+        private async void Process_Realms_CSV_File_to_Output_File_Button_Click(object sender, RoutedEventArgs e) 
         {
-            ExcelBuilder.CreateFromRealmsCSV(Realms_CSV_File_TextBox.Text, Output_XLSX_File_TextBox.Text);
+            var source = Realms_CSV_File_TextBox.Text;
+            var destination = Output_XLSX_File_TextBox.Text;
+
+            Process_Realms_CSV_File_to_Output_File_Button.IsEnabled = false;
+            Process_Realms_CSV_File_to_Output_File_Button.Content = "Processing...";
+
+            Realms_CSV_to_XLSX_File_Progress_Label.Visibility = Visibility.Visible;
+
+            Realms_CSV_to_XLSX_File_Progress_Bar.Visibility = Visibility.Visible;
+            Realms_CSV_to_XLSX_File_Progress_Bar.IsIndeterminate = true;
+            
+
+            var task = Task<int>.Factory.StartNew (() => 
+                ExcelBuilder.CreateFromRealmsCSV (source, destination)
+            );
+            await task;
+
+            Process_Realms_CSV_File_to_Output_File_Button.IsEnabled = true;
+            Process_Realms_CSV_File_to_Output_File_Button.Content = "Process";
+
+            Realms_CSV_to_XLSX_File_Progress_Label.Visibility = Visibility.Hidden;
+            Realms_CSV_to_XLSX_File_Progress_Bar.Visibility = Visibility.Hidden;
         }
     }
 }
