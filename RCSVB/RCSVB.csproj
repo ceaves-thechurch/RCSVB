@@ -66,6 +66,7 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Models\Account.cs" />
+    <Compile Include="Models\Campus.cs" />
     <Compile Include="Models\Department.cs" />
     <Compile Include="Models\RealmsRecord.cs" />
     <Compile Include="Models\RealmsRecordMap.cs" />

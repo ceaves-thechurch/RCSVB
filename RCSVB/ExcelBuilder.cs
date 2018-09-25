@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using CsvHelper;
 using RCSVB.Models;
+using System.Reflection;
 
 namespace RCSVB
 {
@@ -15,6 +16,7 @@ namespace RCSVB
         public static int CreateFromRealmsCSV(string source, string destination)
         {
             var app = CreateExcelApp(destination);
+            app.ScreenUpdating = false;
 
             Workbooks workbooks = app.Workbooks;
             Workbook workbook = workbooks.Add();
@@ -33,6 +35,7 @@ namespace RCSVB
             workbook.SaveAs (destination);
 
             // Cleanup
+            app.ScreenUpdating = true;
             Cleanup(app, workbooks, workbook, worksheet);
             return 0;
         }
@@ -81,7 +84,8 @@ namespace RCSVB
 
         private static Department ReadRealmsRecords(CsvReader csv)
         {
-            Department currentDepartment = null;
+            Campus currentCampus = null;
+            Department currentDepartment = new Department ("root", null);
 
             // Read CSV headers
             csv.Read();
@@ -93,15 +97,27 @@ namespace RCSVB
                 // Populate record using RealmsAccountRecordMap
                 var record = csv.GetRecord<RealmsRecord>();
 
-                if (record.IsAccountRecord())
+                if (record.IsCampusHeading())
+                {
+                    currentCampus = new Campus()
+                    {
+                        ID = currentCampus == null ? 0 : currentCampus.ID + 1,
+                        Name = record.Account.Remove(0, @"Fund: ".Length)
+                    };
+                }
+                else if (record.IsAccountRecord())
                 {
                     // Add Account to currentDepartment
-                    var account = new Account(record, currentDepartment);
+                    var account = currentDepartment.GetOrCreateAccount(record, currentDepartment);
+                    account.SetActual(record.Actual, currentCampus.ID);
+                    account.SetBudget(record.Budget, currentCampus.ID);
+                    account.SetVariance(record.Variance, currentCampus.ID);
                 }
                 else if (record.IsDepartmentHeading())
                 {
                     // Set currentDepartment to new Department
-                    var department = new Department(record.Account, currentDepartment);
+                    var department = currentDepartment.GetOrCreateDepartment(record.Account, currentDepartment);
+                    //var department = new Department(record.Account, currentDepartment);
                     currentDepartment = department;
                 }
                 else if (record.IsDepartmentTotalRow(currentDepartment))
@@ -131,21 +147,19 @@ namespace RCSVB
             worksheet.Cells[6, 2] = "DEPT";
             worksheet.Cells[6, 3] = "ACCOUNT #";
 
-            worksheet.Cells[6,  4] = "CC";
-            worksheet.Cells[6,  5] = "BC";
-            worksheet.Cells[6,  6] = "DT";
-            worksheet.Cells[6,  7] = "JK";
-            worksheet.Cells[6,  8] = "MT";
-            worksheet.Cells[6,  9] = "OW";
-            worksheet.Cells[6, 10] = "ST";
-            worksheet.Cells[6, 11] = "TOTAL TC";
+            worksheet.Cells[6,  4] = "Battlecreek";
+            worksheet.Cells[6,  5] = "Downtown";
+            worksheet.Cells[6,  6] = "Jenks";
+            worksheet.Cells[6,  7] = "Midtown";
+            worksheet.Cells[6,  8] = "Mission House";
+            worksheet.Cells[6,  9] = "Owasso";
+            worksheet.Cells[6, 10] = "South Tulsa";
+            worksheet.Cells[6, 11] = "All Campuses";
 
             worksheet.Range["A1:A6"].EntireRow.Font.Bold = true;
 
             worksheet.Range["D7:D7"].Select();
             worksheet.Application.ActiveWindow.FreezePanes = true;
-
-            worksheet.Columns[11].NumberFormat = "$#,###.00";
         }
 
         private static void PopulateTemplate (Worksheet worksheet, Department departmentRoot)
@@ -153,30 +167,26 @@ namespace RCSVB
             int row = 8;
 
             // Populate Actuals
-            worksheet.Cells[row, 1] = "ACTUALS";
-            ((Range)worksheet.Cells[row, 1]).Font.Bold = true;
-            ((Range)worksheet.Cells[row, 1]).Font.Underline = true;
-            ++row;
-            departmentRoot.PrintExcelRows (worksheet, ref row, account => account.Actual, "ACTUALS");
+            PopulateTemplateSection(worksheet, departmentRoot, account => account.Actuals, "ACTUALS", ref row);
 
             ++row;
 
-            worksheet.Cells[row, 1] = "BUDGET";
-            ((Range)worksheet.Cells[row, 1]).Font.Bold = true;
-            ((Range)worksheet.Cells[row, 1]).Font.Underline = true;
-            ++row;
-            departmentRoot.PrintExcelRows (worksheet, ref row, account => account.Budget, "BUDGET");
+            PopulateTemplateSection(worksheet, departmentRoot, account => account.Budgets, "BUDGETS", ref row);
 
             ++row;
 
-            worksheet.Cells[row, 1] = "VARIANCE";
-            ((Range)worksheet.Cells[row, 1]).Font.Bold = true;
-            ((Range)worksheet.Cells[row, 1]).Font.Underline = true;
-            ++row;
-            departmentRoot.PrintExcelRows (worksheet, ref row, account => account.Variance, "VARIANCE");
+            PopulateTemplateSection(worksheet, departmentRoot, account => account.Variances, "VARIANCES", ref row);
 
-            // Autofit
             worksheet.Columns.AutoFit();
+        }
+
+        private static void PopulateTemplateSection(Worksheet worksheet, Department departmentRoot, Func<Account, List<double>> method, string sectionName, ref int row)
+        {
+            worksheet.Cells[row, 1] = sectionName;
+            ((Range)worksheet.Cells[row, 1]).Font.Bold = true;
+            ((Range)worksheet.Cells[row, 1]).Font.Underline = true;
+            ++row;
+            departmentRoot.PrintExcelRows(worksheet, ref row, account => account.Actuals, sectionName);
         }
     }
 }

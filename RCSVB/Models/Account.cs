@@ -1,4 +1,7 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Globalization;
 
 namespace RCSVB.Models
 {
@@ -11,6 +14,10 @@ namespace RCSVB.Models
         public double Budget { get; set; }
         public double Variance { get; set; }
 
+        public List<double> Actuals;
+        public List<double> Budgets;
+        public List<double> Variances;
+
         private static readonly NumberStyles _style = NumberStyles.Number | 
                                              NumberStyles.AllowCurrencySymbol |
                                              NumberStyles.AllowDecimalPoint |
@@ -20,13 +27,62 @@ namespace RCSVB.Models
         // Ctor
         public Account(RealmsRecord record, Department department)
         {
+            Name = record.Account.Trim();
+
             Department = department;
             Department.Accounts.Add(this);
 
-            Name = record.Account.Trim();
-            Actual = double.TryParse(record.Actual, _style, _culture, out double actual) ? actual : 0f;
-            Budget = double.TryParse(record.Budget, _style, _culture, out double budget) ? budget : 0f;
-            Variance = double.TryParse(record.Variance, _style, _culture, out double variance) ? variance : 0f;
+            Actuals = new List<double> ();
+            Budgets = new List<double> ();
+            Variances = new List<double> ();
+        }
+
+        public void SetActual (string actual)
+        {
+            Actual = double.TryParse(actual, _style, _culture, out double a) ? a : 0f;
+        }
+
+        public void SetActual(string actual, int campus)
+        {
+            while (Actuals.Count < campus)
+            {
+                Actuals.Add(0);
+            }
+            Actuals.Add(double.TryParse(actual, _style, _culture, out double a) ? a : 0f);
+        }
+
+        public void SetBudget (string budget)
+        {
+            Budget = double.TryParse(budget, _style, _culture, out double b) ? b : 0f;
+        }
+
+        public void SetBudget(string budget, int campus)
+        {
+            while (Budgets.Count < campus)
+            {
+                Budgets.Add(0);
+            }
+            Budgets.Add(double.TryParse(budget, _style, _culture, out double b) ? b : 0f);
+        }
+
+        public void SetVariance (string variance)
+        {
+            Variance = double.TryParse(variance, _style, _culture, out double v) ? v : 0f;
+        }
+
+        public void SetVariance(string variance, int campus)
+        {
+            while (Variances.Count < campus)
+            {
+                Variances.Add(0);
+            }
+            Variances.Add(double.TryParse(variance, _style, _culture, out double v) ? v : 0f);
+        }
+
+        // var actualsTotal = myAccount.Total (account => account.Actuals);
+        public double Total (Func<Account, List<double>> method)
+        {
+            return method(this).Sum ();
         }
     }
 }

@@ -10,6 +10,12 @@ namespace RCSVB.Models
         public string Variance { get; set; }
 
         // String starting with 0 or more spaces followed by exactly 5 digits
+        private static Regex GetCampusRecordValidator()
+        {
+            return new Regex(@"^Fund:");
+        }
+
+        // String starting with 0 or more spaces followed by exactly 5 digits
         private static Regex GetAccountRecordValidator()
         {
             return new Regex(@"^\s*[0-9]{5}");
@@ -19,6 +25,19 @@ namespace RCSVB.Models
         private static Regex GetTotalRecordValidator()
         {
             return new Regex(@"^\s*Total\s");
+        }
+
+        public bool IsCampusHeading()
+        {
+            if (!string.IsNullOrEmpty(Account) &&
+                string.IsNullOrEmpty(Actual) &&
+                string.IsNullOrEmpty(Budget) &&
+                string.IsNullOrEmpty(Variance) && 
+                GetCampusRecordValidator().IsMatch(Account))
+            {
+                return true;
+            }
+            return false;
         }
 
         public bool IsAccountRecord ()
