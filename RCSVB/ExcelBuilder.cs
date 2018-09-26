@@ -11,6 +11,8 @@ using System.Reflection;
 
 namespace RCSVB
 {
+    // TODO: Split this class into a CSV reader and an Excel writer
+    //       Create model for top level department container
     class ExcelBuilder
     {
         public static int CreateFromRealmsCSV(string source, string destination)

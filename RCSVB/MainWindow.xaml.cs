@@ -31,26 +31,22 @@ namespace RCSVB
 
         private void Realms_CSV_File_Button_Click (object sender, RoutedEventArgs e)
         {
-            OpenFileDialog openFileDialog = new OpenFileDialog();
-            openFileDialog.Filter = "CSV files (*.csv)|*.csv";
-            openFileDialog.InitialDirectory = @"C:\";
-            openFileDialog.Title = "Select source CSV file exported from Realm";
-            if (openFileDialog.ShowDialog() == true)
-            {
-                Realms_CSV_File_TextBox.Text = openFileDialog.FileName;
-            }
+            OpenFile("CSV files (*.csv)|*.csv", @"C:\", "Select source CSV file exported from Realm", Realms_CSV_File_TextBox);
+        }
+
+        private void Realms_CSV_File_TextBox_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            OpenFile("CSV files (*.csv)|*.csv", @"C:\", "Select source CSV file exported from Realm", Realms_CSV_File_TextBox);
         }
 
         private void Output_XLSX_File_Button_Click(object sender, RoutedEventArgs e)
         {
-            SaveFileDialog saveFileDialog = new SaveFileDialog();
-            saveFileDialog.Filter = "Excel Files (*.xlsx)|*.xlsx";
-            saveFileDialog.InitialDirectory = @"C:\";
-            saveFileDialog.Title = "Select or create destination file.";
-            if (saveFileDialog.ShowDialog() == true)
-            {
-                Output_XLSX_File_TextBox.Text = saveFileDialog.FileName;
-            }
+            SaveFile("Excel Files (*.xlsx)|*.xlsx", @"C:\", "Select or create destination file.", Output_XLSX_File_TextBox);
+        }
+
+        private void Output_XLSX_File_TextBox_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            SaveFile("Excel Files (*.xlsx)|*.xlsx", @"C:\", "Select or create destination file.", Output_XLSX_File_TextBox);
         }
 
         private async void Process_Realms_CSV_File_to_Output_File_Button_Click(object sender, RoutedEventArgs e) 
@@ -77,6 +73,38 @@ namespace RCSVB
 
             Realms_CSV_to_XLSX_File_Progress_Label.Visibility = Visibility.Hidden;
             Realms_CSV_to_XLSX_File_Progress_Bar.Visibility = Visibility.Hidden;
+        }
+
+        private void OpenFile(string filter, string initialDirectory, string title, TextBox target)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog
+            {
+                Title = title,
+                Filter = filter,
+                InitialDirectory = initialDirectory,
+                RestoreDirectory = true
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                target.Text = openFileDialog.FileName;
+            }
+        }
+
+        private void SaveFile(string filter, string initialDirectory, string title, TextBox target)
+        {
+            SaveFileDialog saveFileDialog = new SaveFileDialog
+            {
+                Title = title,
+                Filter = filter,
+                InitialDirectory = initialDirectory,
+                RestoreDirectory = true
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                target.Text = saveFileDialog.FileName;
+            }
         }
     }
 }
